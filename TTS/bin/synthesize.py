@@ -3,6 +3,7 @@
 
 import argparse
 import sys
+import json
 from argparse import RawTextHelpFormatter
 
 # pylint: disable=redefined-outer-name, unused-argument
@@ -131,7 +132,7 @@ If you don't specify any models, then it uses LJSpeech based English model.
         help="model info using query format: <model_type>/<language>/<dataset>/<model_name>",
     )
 
-    parser.add_argument("--text", type=str, default=None, help="Text to generate speech.")
+    parser.add_argument("--text", type=str, default=None, help="Path to JSON file")
 
     # Args for running pre-trained TTS models.
     parser.add_argument(
@@ -350,24 +351,35 @@ If you don't specify any models, then it uses LJSpeech based English model.
         return
 
     # RUN THE SYNTHESIS
+
     if args.text:
-        print(" > Text: {}".format(args.text))
+        print(" > Processing file: {}".format(args.text))
 
-    # kick it
-    wav = synthesizer.tts(
-        args.text,
-        args.speaker_idx,
-        args.language_idx,
-        args.speaker_wav,
-        reference_wav=args.reference_wav,
-        style_wav=args.capacitron_style_wav,
-        style_text=args.capacitron_style_text,
-        reference_speaker_name=args.reference_speaker_idx,
-    )
+    f = open(args.text)
+    data = json.load(f)
+    i = 0
+    for chapter in data['chapters']:
+        i += 1
+        text = chapter + ". " + data['chapters'][chapter]
+        if text:
+            print(" > Processing audio: {}".format(text))
 
-    # save the results
-    print(" > Saving output to {}".format(args.out_path))
-    synthesizer.save_wav(wav, args.out_path)
+        # kick it
+        wav = synthesizer.tts(
+            text,
+            args.speaker_idx,
+            args.language_idx,
+            args.speaker_wav,
+            reference_wav=args.reference_wav,
+            style_wav=args.capacitron_style_wav,
+            style_text=args.capacitron_style_text,
+            reference_speaker_name=args.reference_speaker_idx,
+        )
+
+        # save the results
+        p = args.out_path+str(i)+"p.wav"
+        print(" > Saving output to {}".format(p))
+        synthesizer.save_wav(wav, p)
 
 
 if __name__ == "__main__":
